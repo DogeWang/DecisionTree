@@ -1,4 +1,5 @@
 /*
+精度范围:32位有符号类型
 maxlh:maximum likelihood
 con:conditional
 */
@@ -12,11 +13,13 @@ using namespace std;
 
 list<Member> trainMemberList;
 
-int featureNumber;
+int featureNumber = 0;
 map<string, int> featureIDMap;
 map<int, map<string, int> > featureTypeIDMap;
+int featureTrainNumber = 0;
 
-int typeNumber;
+
+int typeNumber = 0;
 map<string, int> typeIDMap;
 map<int, double> typeProbilityMap;
 
@@ -31,7 +34,7 @@ void type_maxlh_probability(bool con, int featureID, int featureTypeID)
 
     if(con)
     {
-        long long int number = 0;
+        featureTrainNumber = 0;
 
         auto trainIter = trainMemberList.begin();
 
@@ -40,7 +43,7 @@ void type_maxlh_probability(bool con, int featureID, int featureTypeID)
             if((*trainIter).get_featureValueMap()[featureID] == featureTypeID)
             {
                 typeProbilityMap[(*trainIter).get_typeID()]++;
-                ++number;
+                ++featureTrainNumber;
             }
 
             ++trainIter;
@@ -50,7 +53,7 @@ void type_maxlh_probability(bool con, int featureID, int featureTypeID)
 
         while(typeProIter != typeProbilityMap.end())
         {
-            typeProbilityMap[typeProIter->first] = typeProIter->second / (double)number;
+            typeProIter->second = typeProIter->second / (double)featureTrainNumber;
 
             ++typeProIter;
         }
@@ -70,7 +73,7 @@ void type_maxlh_probability(bool con, int featureID, int featureTypeID)
 
         while(typeProIter != typeProbilityMap.end())
         {
-            typeProbilityMap[typeProIter->first] = typeProIter->second / (double)trainMemberList.size();
+            typeProIter->second = typeProIter->second / (double)trainMemberList.size();
 
             ++typeProIter;
         }
@@ -90,15 +93,38 @@ double empirical_entropy()
     while(typeProIter != typeProbilityMap.end())
     {
         entropy -= typeProIter->second * log(typeProIter->second);
+
         ++typeProIter;
     }
 
     return entropy;
+
 }
 
-double conditional_entropy()
+double empirical_conditional_entropy(int featureID)
 {
     double entropy = 0;
+
+    auto featureTypeIter = featureTypeIDMap[featureID].begin();
+
+    while(featureTypeIter != featureTypeIDMap[featureID].end())
+    {
+        type_maxlh_probability(true, featureID, featureTypeIter->second);
+
+        auto typeProIter = typeProbilityMap.begin();
+        double featureEntropy = 0;
+
+        while(typeProIter != typeProbilityMap.end())
+        {
+            featureEntropy -= typeProIter->second * log(typeProIter->second);
+
+            ++typeProIter;
+        }
+
+        entropy += ((double)featureTrainNumber / (double)trainMemberList.size()) * featureEntropy;
+
+        ++featureTypeIter;
+    }
 
     return entropy;
 }
