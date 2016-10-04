@@ -1,7 +1,7 @@
 #ifndef MEMBER_H_INCLUDED
 #define MEMBER_H_INCLUDED
 
-#include<map>
+#include <map>
 using std::map;
 
 class Member {
