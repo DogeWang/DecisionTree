@@ -33,6 +33,7 @@
 			<Add option="-fexceptions" />
 		</Compiler>
 		<Unit filename="Member.h" />
+		<Unit filename="TreeNode.h" />
 		<Unit filename="main.cpp" />
 		<Extensions>
 			<code_completion />
