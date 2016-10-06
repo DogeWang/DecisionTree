@@ -16,12 +16,12 @@ using namespace std;
 list<Member> trainList;
 
 int featureNumber = 0;
-map<string, int> featureIDMap;
-map<int, map<string, int> > featureTypeIDMap;
+map<string, int> featureIDMap; // 对每一个特征进行一个键值映射
+map<int, map<string, int> > featureTypeIDMap; // 对特征中的每一个进行一个键值映射
 int featureTrainNumber = 0;
 
 int typeNumber = 0;
-map<string, int> typeIDMap;
+map<string, int> typeIDMap; // 对每一个类别进行一个键值映射
 map<int, double> typeProbilityMap;
 
 int parameterE = 0.5; // 阈值，判断是否继续分支
@@ -131,6 +131,37 @@ double empirical_conditional_entropy(int featureID, list<Member> subTrainList)
     return entropy;
 }
 
+double feature_entropy(int featureID, list<Member> subTrainList)
+{
+    double entropy = 0;
+
+    auto featureTypeIter = featureTypeIDMap[featureID].begin();
+
+    while(featureTypeIter != featureTypeIDMap[featureID].end())
+    {
+        double tempNumber = 0;
+
+        auto subTrainIter = subTrainList.begin();
+
+        while(subTrainIter != subTrainList.end())
+        {
+            if((*subTrainIter).get_featureValueMap()[featureID] == featureTypeIter->second)
+            {
+                ++tempNumber;
+            }
+
+            ++subTrainIter;
+        }
+
+        tempNumber /=  (double)subTrainList.size();
+        entropy -= tempNumber * log(tempNumber);
+
+        ++featureTypeIter;
+    }
+
+    return entropy;
+}
+
 int max_type(list<Member> subTrainList)
 {
     map<int, int> typeNumberMap;
@@ -154,7 +185,7 @@ int max_type(list<Member> subTrainList)
     }
 
     int maxNumber = 0;
-    int maxType = -1;
+    int maxTypeID = -1;
     auto typeNumIter = typeNumberMap.begin();
 
     while(typeNumIter != typeNumberMap.end())
@@ -162,31 +193,51 @@ int max_type(list<Member> subTrainList)
         if(typeNumIter->second > maxNumber)
         {
             maxNumber = typeNumIter->second;
-            maxType = typeNumIter->first;
+            maxTypeID = typeNumIter->first;
         }
 
         ++typeNumIter;
     }
 
-    return maxType;
+    return maxTypeID;
 }
 
-TreeNode ID3(list<Member> subTrainList)
+TreeNode ID3_C45(bool ic,list<Member> subTrainList)
 {
     auto featureIDIter = featureIDMap.begin();
     double maxFeatureValue = 0;
     int maxFeatureID = -1;
 
-    while(featureIDIter != featureIDMap.end())
+    if(ic)
     {
-        double tempMutual = empirical_entropy(subTrainList) - empirical_conditional_entropy(featureIDIter->second, subTrainList);
-
-        if(tempMutual > maxFeatureValue)
+        while(featureIDIter != featureIDMap.end())
         {
-            maxFeatureValue = tempMutual;
-            maxFeatureID = featureIDIter->second;
+            double tempMutual = empirical_entropy(subTrainList) - empirical_conditional_entropy(featureIDIter->second, subTrainList);
+
+            if(tempMutual > maxFeatureValue)
+            {
+                maxFeatureValue = tempMutual;
+                maxFeatureID = featureIDIter->second;
+            }
         }
     }
+    else
+    {
+        while(featureIDIter != featureIDMap.end())
+        {
+            double tempMutual = empirical_entropy(subTrainList) - empirical_conditional_entropy(featureIDIter->second, subTrainList);
+
+            tempMutual /= feature_entropy(featureIDIter->second, subTrainList);
+
+            if(tempMutual > maxFeatureValue)
+            {
+                maxFeatureValue = tempMutual;
+                maxFeatureID = featureIDIter->second;
+            }
+        }
+    }
+
+
 
     if(maxFeatureValue >= parameterE)
     {
@@ -211,7 +262,7 @@ TreeNode ID3(list<Member> subTrainList)
                 ++subTrainIter;
             }
 
-            treeNode.get_treeNodeMap()[featureTypeIter->second] = ID3(tempTrainList);
+            treeNode.get_treeNodeMap()[featureTypeIter->second] = ID3_C45(ic, tempTrainList);
 
             ++featureTypeIter;
         }
